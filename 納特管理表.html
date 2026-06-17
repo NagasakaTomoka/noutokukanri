@@ -1,0 +1,1065 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>納特管理表 進捗ビュー</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Meiryo','Segoe UI',sans-serif;background:#f0f2f5;color:#222;font-size:13px}
+header{background:#1a2744;color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+header h1{font-size:18px;font-weight:700;letter-spacing:1px}
+header .sub{font-size:12px;opacity:.7;margin-top:2px}
+.toolbar{padding:10px 16px;background:#fff;border-bottom:1px solid #e0e0e0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:52px;z-index:99;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.toolbar input{border:1px solid #ccc;border-radius:6px;padding:5px 10px;font-size:13px;width:200px}
+.toolbar select{border:1px solid #ccc;border-radius:6px;padding:5px 8px;font-size:13px}
+.filter-btn{padding:4px 12px;border-radius:14px;border:1px solid #ccc;background:#f8f8f8;cursor:pointer;font-size:12px;transition:.15s}
+.filter-btn.active{background:#1a2744;color:#fff;border-color:#1a2744}
+.count-info{margin-left:auto;font-size:12px;color:#666}
+.summary{display:flex;gap:10px;padding:12px 16px;flex-wrap:wrap;background:#fff;border-bottom:1px solid #e8e8e8}
+.scard{flex:1;min-width:110px;background:#f7f9ff;border-radius:8px;padding:10px 14px;border-left:3px solid;text-align:center}
+.scard .sc-label{font-size:11px;color:#666;margin-bottom:4px}
+.scard .sc-val{font-size:20px;font-weight:700}
+.scard.c1{border-color:#6c757d}.scard.c1 .sc-val{color:#555}
+.scard.c2{border-color:#17a2b8}.scard.c2 .sc-val{color:#0d6875}
+.scard.c3{border-color:#28a745}.scard.c3 .sc-val{color:#1a7a30}
+.scard.c4{border-color:#fd7e14}.scard.c4 .sc-val{color:#c05e00}
+.scard.c5{border-color:#6f42c1}.scard.c5 .sc-val{color:#4e2d8a}
+.table-wrap{overflow:auto;max-height:calc(100vh - 210px)}
+table{width:100%;border-collapse:collapse;min-width:900px}
+thead tr{background:#1a2744;color:#fff}
+thead th{padding:7px 8px;text-align:center;font-size:11px;font-weight:600;white-space:nowrap;border-right:1px solid #2d3a5e;position:sticky;top:0;z-index:3;background:#1a2744}
+thead tr:nth-child(2) th{top:30px}
+thead th.left{text-align:left}
+tbody tr{border-bottom:1px solid #eee;transition:background .1s}
+tbody tr:hover{background:#e8eeff}
+tbody tr.hidden{display:none}
+tbody tr.odd{background:#fafbff}
+tbody tr.odd:hover{background:#e8eeff}
+td{padding:5px 7px;vertical-align:middle;border-right:1px solid #f0f0f0}
+td.name-cell{min-width:180px;font-weight:600;font-size:12px;line-height:1.3;position:sticky;left:52px;z-index:1;background:#fff}
+td.code-cell{color:#999;font-size:11px;text-align:center;width:52px;min-width:52px;position:sticky;left:0;z-index:1;background:#fff}
+tbody tr.odd td.code-cell,tbody tr.odd td.name-cell{background:#fafbff}
+tbody tr:hover td.code-cell,tbody tr:hover td.name-cell{background:#e8eeff}
+td.center{text-align:center}
+/* フラグプルダウン */
+.flg-sel{
+  border-radius:10px;border-width:1px;border-style:solid;
+  padding:1px 14px 1px 5px;font-size:10px;font-weight:700;
+  cursor:pointer;outline:none;
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23666'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 3px center;background-size:7px;
+  min-width:56px;
+}
+.flg-sel.v-有   {background-color:#d4edda;color:#155724;border-color:#b1dfbb}
+.flg-sel.v-無   {background-color:#e9ecef;color:#6c757d;border-color:#ced4da}
+.flg-sel.v-先方 {background-color:#d1ecf1;color:#0c5460;border-color:#bee5eb}
+.flg-sel.v-解約 {background-color:#f8d7da;color:#721c24;border-color:#f5c6cb}
+.flg-sel.v-ゼロ {background-color:#fff3cd;color:#856404;border-color:#ffeeba}
+.flg-sel.v-other{background-color:#e2d9f3;color:#4e2d8a;border-color:#d0bdf7}
+/* 担当入力 */
+.tanto-input{
+  border:1px solid #ced4da;border-radius:10px;
+  padding:1px 6px;font-size:11px;font-weight:600;
+  color:#1a2744;background:#f0f4ff;
+  width:64px;outline:none;cursor:pointer;
+  text-align:center;
+}
+.tanto-input:focus{border-color:#4361ee;background:#fff}
+/* GRP入力 */
+.grp-input{
+  border:1px solid #ced4da;border-radius:10px;
+  padding:1px 4px;font-size:11px;font-weight:700;
+  width:40px;cursor:pointer;outline:none;
+  text-align:center;color:#fff;
+  transition:background .2s;
+}
+.grp-input:focus{border-color:#4361ee;}
+/* 部門入力 */
+.dept-input{
+  border:1px solid #ced4da;border-radius:10px;
+  padding:1px 6px;font-size:11px;font-weight:600;
+  width:72px;cursor:pointer;outline:none;
+  text-align:center;background:#e8eaf6;color:#3949ab;
+}
+.dept-input:focus{border-color:#4361ee;background:#fff;color:#333;}
+/* 回収入力 */
+.recv-input{
+  border-radius:10px;border-width:1px;border-style:solid;
+  padding:1px 6px;font-size:13px;font-weight:700;
+  cursor:pointer;outline:none;text-align:center;
+  width:48px;transition:background .15s;background-color:#f8f9fa;border-color:#ced4da;color:#6c757d;
+}
+.recv-input.v-done  {background-color:#d4edda;color:#155724;border-color:#b1dfbb}
+.recv-input.v-na    {background-color:#e9ecef;color:#6c757d;border-color:#ced4da}
+.recv-input.v-client{background-color:#d1ecf1;color:#0c5460;border-color:#bee5eb}
+.recv-input:focus   {border-color:#4361ee;}
+/* ドット */
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dot.done {background:#28a745}
+.dot.empty{background:#dee2e6}
+.dot.na   {background:#e9ecef;opacity:.4}
+.dot.client{background:#bee5eb}
+/* グループバッジ */
+.grp-badge{display:inline-block;width:22px;height:22px;border-radius:50%;text-align:center;line-height:22px;font-size:11px;font-weight:700;color:#fff}
+/* 部門バッジ */
+.dept-badge{display:inline-block;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:600;background:#e8eaf6;color:#3949ab}
+/* 削除ボタン */
+.del-btn{background:none;border:none;color:#ccc;font-size:14px;cursor:pointer;padding:2px 4px;border-radius:4px;line-height:1}
+.del-btn:hover{background:#f8d7da;color:#c0392b}
+/* トースト */
+#toast{position:fixed;bottom:24px;right:24px;background:#1a2744;color:#fff;padding:8px 18px;border-radius:20px;font-size:12px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .3s;z-index:9999}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<header>
+  <div>
+    <h1>納特管理表 &nbsp;進捗ビュー</h1>
+    <div class="sub">源泉税 / 労働保険申告書 / 算定基礎届</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div style="font-size:12px;opacity:.7" id="hdr-date"></div>
+    <button onclick="resetSaved()" style="font-size:11px;padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.15);color:#fff;cursor:pointer">入力リセット</button>
+  </div>
+</header>
+
+<div class="summary" id="summary-area"></div>
+
+<div class="toolbar">
+  <input type="text" id="search" placeholder="会社名・コードで検索…" oninput="applyFilters()">
+  <select id="group-filter" onchange="applyFilters()"><option value="">GRP：全て</option></select>
+  <select id="dept-filter"  onchange="applyFilters()"><option value="">部門：全て</option></select>
+  <select id="tanto-filter" onchange="applyFilters()"><option value="">担当：全員</option></select>
+  <button class="filter-btn active" onclick="setFilter('all',this)">全件</button>
+  <button class="filter-btn" onclick="setFilter('gensen-inc',this)">源泉税未完</button>
+  <button class="filter-btn" onclick="setFilter('roho-inc',this)">労保未完</button>
+  <button class="filter-btn" onclick="setFilter('shaho-inc',this)">社保未完</button>
+  <span class="count-info" id="cnt-info"></span>
+  <button class="filter-btn" onclick="openAddModal()" style="background:#1a2744;color:#fff;border-color:#1a2744;margin-left:8px">＋ 法人追加</button>
+</div>
+
+<!-- 追加モーダル -->
+<div id="add-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;padding:24px 28px;min-width:320px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+    <h3 style="font-size:15px;margin-bottom:16px;color:#1a2744">法人追加</h3>
+    <div style="display:grid;gap:10px">
+      <label style="font-size:12px;font-weight:600;color:#555">コード
+        <input id="add-code" type="text" placeholder="例：1000" style="display:block;width:100%;margin-top:3px;border:1px solid #ccc;border-radius:6px;padding:5px 8px;font-size:13px">
+      </label>
+      <label style="font-size:12px;font-weight:600;color:#555">会社名 <span style="color:red">*</span>
+        <input id="add-name" type="text" placeholder="会社名を入力" style="display:block;width:100%;margin-top:3px;border:1px solid #ccc;border-radius:6px;padding:5px 8px;font-size:13px">
+      </label>
+      <label style="font-size:12px;font-weight:600;color:#555">部門
+        <input id="add-dept" list="dept-datalist" type="text" placeholder="部門" style="display:block;width:100%;margin-top:3px;border:1px solid #ccc;border-radius:6px;padding:5px 8px;font-size:13px">
+      </label>
+      <label style="font-size:12px;font-weight:600;color:#555">GRP
+        <input id="add-group" list="grp-datalist" type="text" placeholder="GRP" style="display:block;width:100%;margin-top:3px;border:1px solid #ccc;border-radius:6px;padding:5px 8px;font-size:13px">
+      </label>
+      <label style="font-size:12px;font-weight:600;color:#555">担当
+        <input id="add-tanto" list="tanto-datalist" type="text" placeholder="担当者名" style="display:block;width:100%;margin-top:3px;border:1px solid #ccc;border-radius:6px;padding:5px 8px;font-size:13px">
+      </label>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+      <button onclick="closeAddModal()" style="padding:6px 18px;border-radius:8px;border:1px solid #ccc;background:#f0f0f0;cursor:pointer;font-size:13px">キャンセル</button>
+      <button onclick="submitAdd()" style="padding:6px 18px;border-radius:8px;border:none;background:#1a2744;color:#fff;cursor:pointer;font-size:13px;font-weight:600">追加</button>
+    </div>
+  </div>
+</div>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+  <th rowspan="2" class="left" style="position:sticky;left:0;z-index:4;background:#1a2744;width:52px">コード</th>
+  <th rowspan="2" class="left" style="position:sticky;left:52px;z-index:4;background:#1a2744;min-width:180px">会社名</th>
+  <th rowspan="2">部門</th>
+  <th rowspan="2">GRP</th>
+  <th rowspan="2">担当</th>
+  <th colspan="3" style="background:#263a6e">源泉税</th>
+  <th colspan="2" style="background:#2d4a2a">労働保険申告書</th>
+  <th colspan="2" style="background:#2a3f5a">算定基礎届</th>
+  <th rowspan="2" style="width:32px"></th>
+</tr>
+<tr>
+  <th title="納期区分">納期</th>
+  <th title="申告書作成">作成</th>
+  <th title="案内日">案内</th>
+  <th title="労保フラグ">フラグ</th>
+  <th title="回収日">回収</th>
+  <th title="社保フラグ">フラグ</th>
+  <th title="回収日">回収</th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+</div>
+
+<script>
+const DATA = [
+{"code":"564","name":"株式会社ラ・ドルチェ","dept":"管理","group":"K","tanto":"岩松","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"567","name":"株式会社アートスタイルマーケット","dept":"管理","group":"K","tanto":"岩松","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1137","name":"KUSAWAZA(株)","dept":"管理","group":"K","tanto":"岩松","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1264","name":"株式会社metaasun（旧YBY）","dept":"管理","group":"K","tanto":"岩松","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"130","name":"惠鋒グローバル株式会社","dept":"管理","group":"K","tanto":"岩松","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"373","name":"ｉＦＬＹソリューションズジャパン株式会社","dept":"管理","group":"K","tanto":"岩松","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"397","name":"株式会社パワーマップ","dept":"管理","group":"K","tanto":"岩松","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"552","name":"トレジャーハウス合同会社","dept":"管理","group":"K","tanto":"岩松","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"652","name":"メモシ合同会社","dept":"管理","group":"K","tanto":"岩松","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"843","name":"Chic株式会社","dept":"管理","group":"K","tanto":"岩松","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"946","name":"株式会社MUMU","dept":"管理","group":"K","tanto":"岩松","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1029","name":"株式会社シンプル","dept":"管理","group":"K","tanto":"岩松","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1204","name":"YIFANG GLOBAL CO.,LTD","dept":"管理","group":"K","tanto":"岩松","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"117","name":"株式会社メカロスタッフ","dept":"藤田","group":"B","tanto":"岩澤","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"125","name":"株式会社ｱｲﾃﾞｨｸ","dept":"藤田","group":"B","tanto":"岩澤","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"133","name":"株式会社アイテック","dept":"藤田","group":"B","tanto":"岩澤","gensenKigen":"","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"213","name":"株式会社コミット","dept":"藤田","group":"B","tanto":"岩澤","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"226","name":"創和株式会社","dept":"藤田","group":"B","tanto":"岩澤","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"237","name":"株式会社ストリート","dept":"藤田","group":"B","tanto":"岩澤","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"303","name":"アール・アンド・アール合同会社","dept":"藤田","group":"B","tanto":"岩澤","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"542","name":"株式会社　かすみ食品","dept":"藤田","group":"B","tanto":"岩澤","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"565","name":"㈱アポロ社","dept":"藤田","group":"B","tanto":"岩澤","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"644","name":"円満㈱","dept":"藤田","group":"B","tanto":"岩澤","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"677","name":"合同会社まるみ","dept":"藤田","group":"B","tanto":"岩澤","gensenKigen":"なし","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"687","name":"㈱ユウシュンプロダクション","dept":"藤田","group":"B","tanto":"岩澤","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"745","name":"(株)ｍｉｎｔｏ．","dept":"藤田","group":"B","tanto":"岩澤","gensenKigen":"なし","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"817","name":"株式会社レコオーランド","dept":"藤田","group":"B","tanto":"岩澤","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"952","name":"株式会社エイディーエス","dept":"藤田","group":"B","tanto":"岩澤","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"956","name":"グローバース","dept":"藤田","group":"B","tanto":"岩澤","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1126","name":"メカロエンジニアリング株式会社","dept":"藤田","group":"B","tanto":"岩澤","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1236","name":"株式会社メカロテクノロジー","dept":"藤田","group":"B","tanto":"岩澤","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1243","name":"㈱タグログ","dept":"藤田","group":"B","tanto":"岩澤","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1294","name":"株式会社ハイカット","dept":"藤田","group":"B","tanto":"岩澤","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"975","name":"ウイスコインターナショナル株式会社","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1052","name":"株式会社uqunie","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1216","name":"ウイスコ株式会社","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1736","name":"村越　昭彦","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1793","name":"岩切　琢磨","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"2479","name":"岸　大輔","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"243","name":"株式会社リバイブビルド","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"308","name":"株式会社サン・ワゥード","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"317","name":"GEKKO","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"346","name":"ナーチャーウィズ株式会社","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"370","name":"株式会社FIDDLER","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"371","name":"合同会社Blanc","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"390","name":"緑葬儀社","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"一般","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"418","name":"有限会社春日部張子人形店","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"531","name":"株式会社KING WEST","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"648","name":"テラサワ・エンタープライズ株式会社","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"649","name":"株式会社TERMONY","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"685","name":"医療法人白星会","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"970","name":"株式会社ドクチョク","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1226","name":"SKジャパンエクスポート","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1231","name":"タイヨウオートモーティブ","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1278","name":"T&Kデザインワークス株式会社","dept":"村田","group":"C","tanto":"桑原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1134","name":"楽橙国際株式会社","dept":"村田","group":"A","tanto":"胡","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1140","name":"GLGC株式会社","dept":"村田","group":"A","tanto":"胡","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1282","name":"株式会社建大","dept":"村田","group":"A","tanto":"胡","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1289","name":"株式会社アイ・リーダージャパン","dept":"村田","group":"A","tanto":"胡","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"127","name":"september合同会社","dept":"村田","group":"A","tanto":"胡","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"238","name":"QH国際貿易株式会社","dept":"村田","group":"A","tanto":"胡","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"240","name":"T・Lコンサルティング株式会社","dept":"村田","group":"A","tanto":"胡","gensenKigen":"","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"310","name":"カーロテック株式会社（解約）","dept":"村田","group":"A","tanto":"胡","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"385","name":"合同会社ピースウォーク","dept":"村田","group":"A","tanto":"胡","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"432","name":"ストリングアセット合同会社","dept":"村田","group":"A","tanto":"胡","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"549","name":"MRK合同会社","dept":"村田","group":"A","tanto":"胡","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"556","name":"新和工業株式会社","dept":"村田","group":"A","tanto":"胡","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"631","name":"日本注射針工業","dept":"村田","group":"A","tanto":"胡","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"663","name":"株式会社 Journey to Welness","dept":"村田","group":"A","tanto":"胡","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"674","name":"株式会社KEKS（解約）","dept":"村田","group":"A","tanto":"胡","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"先方","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"679","name":"アモネ株式会社（解約）","dept":"村田","group":"A","tanto":"胡","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"738","name":"Sunterritory株式会社","dept":"村田","group":"A","tanto":"胡","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"848","name":"株式会社Meliora","dept":"村田","group":"A","tanto":"胡","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1039","name":"Element株式会社","dept":"村田","group":"A","tanto":"胡","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1206","name":"Ｉｎｓｔａ３６０Ｊａｐａｎ株式会社","dept":"村田","group":"A","tanto":"胡","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1303","name":"桑田　英隆弁護士","dept":"村田","group":"A","tanto":"胡","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1395","name":"儀間　眞悟","dept":"村田","group":"A","tanto":"胡","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1490","name":"青木　美穂（解約）","dept":"村田","group":"A","tanto":"胡","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1581","name":"青木　健悟弁護士","dept":"村田","group":"A","tanto":"胡","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"539","name":"(経理部長)","dept":"管理","group":"K","tanto":"女屋","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"824","name":"菅原木材株式会社","dept":"管理","group":"K","tanto":"女屋","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"7006","name":"アイエクシード社会保険労務士法人","dept":"管理","group":"K","tanto":"女屋","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1285","name":"MST株式会社","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1317","name":"大石　卓哉","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1758","name":"弦巻　篤史","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1775","name":"土井　裕一","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"230","name":"アルゴリトミ","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"242","name":"ミリ","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"307","name":"中日本再エネ促進事業協同組合","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"312","name":"合同会社KAKERU","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"318","name":"有限会社キーネット","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"354","name":"グラシアス","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"376","name":"Globic Japan","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"383","name":"マスターシップス","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"416","name":"トーソー不動産","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"541","name":"スプリングフィーリング","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"615","name":"メモリーワールド","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"654","name":"株式会社イレイス","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"666","name":"合同会社ディープ","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"667","name":"合同会社VUIKU","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"678","name":"グローカル株式会社","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"684","name":"株式会社Omusubi Tech","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"688","name":"トライベース株式会社","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"737","name":"有限会社デジコム","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"740","name":"たけのこ工務店","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"748","name":"株式会社backseat","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"-","rohoRecv":"","shahoFlg":"-","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"836","name":"ピーク株式会社","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"856","name":"合同会社一二三","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1020","name":"株式会社トーソーコンストラクション","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1046","name":"富康株式会社","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1128","name":"株式会社泉屋ビル","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1270","name":"株式会社ミラクル・ジェード","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1386","name":"SAITO　ROSEMARIE　SANTOS","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1471","name":"祝　三枝子","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"-","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1543","name":"大野　慎斗","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1544","name":"久門　真弓","dept":"藤田","group":"D","tanto":"小河","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"6016","name":"高橋　啓子","dept":"資産","group":"S","tanto":"水上","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"-","rohoRecv":"","shahoFlg":"-","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"387","name":"株式会社オウビ","dept":"資産","group":"S","tanto":"水上","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"628","name":"有限会社千咲都","dept":"資産","group":"S","tanto":"水上","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"670","name":"有限会社関野商事","dept":"資産","group":"S","tanto":"水上","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"838","name":"有限会社三浦利工務店","dept":"資産","group":"S","tanto":"水上","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"943","name":"株式会社CARDO","dept":"資産","group":"S","tanto":"水上","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1403","name":"中村孝誠","dept":"資産","group":"S","tanto":"水上","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"-","rohoRecv":"","shahoFlg":"-","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1031","name":"碧空株式会社","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1032","name":"株式会社カズトモ","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"225","name":"㈱MindShip","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"227","name":"株式会社AVANTI","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"322","name":"株式会社Oito","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"330","name":"合同会社サンカン","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"345","name":"株式会社421デザイン","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"348","name":"株式会社アドバンテージ","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"351","name":"大廣","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"358","name":"合同会社フェザンツ","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"419","name":"株式会社ＳＡＫＥＮＯＷＡ","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"420","name":"㈱ティーケイシー","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"先方","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"427","name":"株式会社ＭＳＤ","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"なし","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"546","name":"株式会社マット","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"先方","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"612","name":"株式会社　ヤング","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"638","name":"株式会社ふじ家","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"653","name":"合同会社Anello","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"656","name":"株式会社FOTH","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"657","name":"株式会社HEARTS","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"658","name":"株式会社Y.S.N","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"721","name":"リンクス株式会社","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"先方","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"727","name":"合同会社COLORFUL.","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"802","name":"株式会社ベスト","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"846","name":"MATエンタープライズ株式会社","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"先方","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"944","name":"株式会社日本バイクパーキング","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"先方","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"960","name":"㈱Logues","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1043","name":"ナーサ合同会社","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1044","name":"株式会社ブンラボ","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1045","name":"株式会社Growマネージメント","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1054","name":"株式会社Ｒｏｏｔｓ","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1130","name":"株式会社MMD","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1132","name":"スキーメックス","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"なし","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1138","name":"合同会社GIORNO","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1205","name":"インラボテックジャパン","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"先方","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1233","name":"株式会社レフバ","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1237","name":"株式会社WonderGraffiti","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1301","name":"信國　稔大（サレポワヴレ）","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1306","name":"厚喜　隆幸","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1439","name":"西村　洋一","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1497","name":"野元　大輔","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1567","name":"西田　陽一郎","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1616","name":"井上　隆之","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1617","name":"山嵜　高幸","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1744","name":"齋藤　貴花人","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"3107","name":"麻生　カヨ","dept":"藤田","group":"B","tanto":"杉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"128","name":"株式会社伊東組","dept":"藤田","group":"B","tanto":"武藤雅智","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"314","name":"医療法人愛仁会（利根川橋クリニック）","dept":"","group":"","tanto":"清水","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"321","name":"土浦タクシー","dept":"","group":"","tanto":"清水","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"327","name":"株式会社日本典礼寺院協会","dept":"藤田","group":"B","tanto":"武藤雅智","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"331","name":"GoToJapan","dept":"","group":"","tanto":"清水","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"364","name":"Tip株式会社","dept":"藤田","group":"B","tanto":"武藤雅智","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"379","name":"eスポーツコンサルティング株式会社","dept":"","group":"","tanto":"清水","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"439","name":"有限会社協栄紹介所","dept":"","group":"","tanto":"清水","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"616","name":"㈱デジタルトランスフォーメーション(旧アクセレイ㈱)","dept":"藤田","group":"B","tanto":"武藤雅智","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"660","name":"ネクストチャプター株式会社","dept":"","group":"","tanto":"清水","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"664","name":"イーサギフト合同会社","dept":"","group":"","tanto":"清水","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"716","name":"ロボフィス株式会社","dept":"藤田","group":"B","tanto":"武藤雅智","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"HBL㈱(旧㈱イーグルエナジー・ジャパン)","name":"","dept":"","group":"","tanto":"清水","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"948","name":"㈱アシスタント","dept":"藤田","group":"B","tanto":"武藤雅智","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1215","name":"株式会社Ｎｅｘｔ　Ｏｎｅ","dept":"藤田","group":"B","tanto":"武藤雅智","gensenKigen":"","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1292","name":"プロドライバーズ","dept":"","group":"","tanto":"清水","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1784","name":"原嶋　正子","dept":"藤田","group":"B","tanto":"武藤雅智","gensenKigen":"","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"3167","name":"渡邊　美知子","dept":"","group":"","tanto":"清水","gensenKigen":"無","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"6136","name":"荒畑　隆","dept":"","group":"","tanto":"清水","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1201","name":"城東平安建設株式会社","dept":"村田","group":"C","tanto":"石原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1266","name":"株式会社ユニウェイズ","dept":"村田","group":"C","tanto":"石原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"389","name":"㈱マレソルアンドカンパニー","dept":"村田","group":"C","tanto":"石原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"395","name":"株式会社ゼイケイ","dept":"村田","group":"C","tanto":"石原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"先方","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"424","name":"株式会社栄潤社","dept":"村田","group":"C","tanto":"石原","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"429","name":"株式会社Ｍ’Ｓ　Ａｇｅｎｔ","dept":"村田","group":"C","tanto":"石原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"440","name":"平安リアルエステート","dept":"村田","group":"C","tanto":"石原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"559","name":"株式会社エカラノ","dept":"村田","group":"C","tanto":"石原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"560","name":"合同会社大洗ホテルプロジェクト","dept":"村田","group":"C","tanto":"石原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"562","name":"㈱JMホスエス（契約終了）","dept":"村田","group":"C","tanto":"石原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"655","name":"アクト株式会社","dept":"村田","group":"C","tanto":"石原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"742","name":"合同会社ギフテッド","dept":"村田","group":"C","tanto":"石原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"862","name":"合同会社亀有地所(関与終了）","dept":"村田","group":"C","tanto":"石原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"964","name":"㈱ユースリー","dept":"村田","group":"C","tanto":"石原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"968","name":"㈱ニケール","dept":"村田","group":"C","tanto":"石原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1234","name":"大仙寺","dept":"村田","group":"C","tanto":"石原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1235","name":"正覺院","dept":"村田","group":"C","tanto":"石原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1622","name":"軽部　涼","dept":"村田","group":"C","tanto":"石原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"6094","name":"白神裕三","dept":"村田","group":"C","tanto":"石原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"124","name":"株式会社JEX","dept":"村田","group":"C","tanto":"石原","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1017","name":"合同会社VEGA","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1036","name":"株式会社テラウム","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有(高)","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1650","name":"根深　太一","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1663","name":"柴﨑　雄大","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"無","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"2341","name":"内川　友行","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"119","name":"株式会社RGB","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"120","name":"合同会社向井商店","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"先方","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"206","name":"株式会社榎本工業","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"235","name":"有限会社フューチャーラボ","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"304","name":"株式会社東京ITシステムサービス","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有(上)","rohoRecv":"","shahoFlg":"有(上)","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"311","name":"株式会社スコーレ","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"342","name":"有限会社あけぼの商事","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"375","name":"有限会社Margin","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"568","name":"株式会社ジャパンメール","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"639","name":"空株式会社","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"有(上)","rohoRecv":"","shahoFlg":"有(上)","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"672","name":"株式会社スタートライズ","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"722","name":"株式会社ＢＤＩ","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"723","name":"大一物産","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"826","name":"有限会社大島商事","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"941","name":"ノア・ライトネクスト","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有(市)","rohoRecv":"","shahoFlg":"有(市)","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"942","name":"more conceive","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有(上)","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"971","name":"マギランジャパン株式会社","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"976","name":"株式会社ホーキング","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1211","name":"株式会社リュクス","dept":"村田","group":"E","tanto":"千葉","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1257","name":"株式会社N.","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"110","name":"誠建","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"131","name":"MIRAIing","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"228","name":"新和企業株式会社","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"解約","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"245","name":"ミームミーム","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"301","name":"株式会社スラッシュ","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"343","name":"t.n.t","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"407","name":"アンフィールド","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"544","name":"株式会社三水","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"629","name":"アクロスアラウンド","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"643","name":"アニテリア","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"無","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"650","name":"キュリー株式会社","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"651","name":"nanairokids合同会社","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"清算","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"668","name":"株式会社アクロスデザインワークス","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"683","name":"UMO Tokyo","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"686","name":"MSQ Tokyo","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"701","name":"尾城会","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"732","name":"有限会社ネギシ","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"733","name":"株式会社iXiA","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"解約","gensenCreate":"","gensenAnno":"","rohoFlg":"-","rohoRecv":"","shahoFlg":"-","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"823","name":"DUO RING","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"945","name":"Dorian Data株式会社","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"清算","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"957","name":"MosTコミュニケーションズ株式会社","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"先方","gensenCreate":"","gensenAnno":"","rohoFlg":"先方","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"958","name":"株式会社アイフォーアイ","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1030","name":"合同会社大桟橋共同ビル","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1102","name":"ブルク","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1203","name":"有限会社峯沢工務店","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1220","name":"関東緑地管理株式会社","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"先方","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1319","name":"瀬川　圭市","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1323","name":"尾城正代","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1442","name":"髙橋　伸介","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1482","name":"工藤　英城","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"無","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1512","name":"中西　盛子","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1564","name":"堀城之(霞が関国際特許事務所)","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"320","name":"合一株式会社","dept":"藤田","group":"D","tanto":"川﨑","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1042","name":"株式会社AAS","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1269","name":"株式会社アシスター","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有り","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1271","name":"ノードトレーディング合同会社","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1272","name":"NPO法人HaloART","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1281","name":"合同会社アイエイチエステートビズ","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1335","name":"〆田義臣","dept":"","group":"","tanto":"村田","gensenKigen":"宮下","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1658","name":"田中　一宏","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"122","name":"株式会社アリー・エンターテイメント","dept":"","group":"","tanto":"村田","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"224","name":"株式会社AKstyle","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"231","name":"合同会社KENSHIN","dept":"","group":"","tanto":"村田","gensenKigen":"無","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"239","name":"有限会社中田調剤","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"244","name":"株式会社ウミノヒ","dept":"","group":"","tanto":"村田","gensenKigen":"","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"305","name":"DORAKEN","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"313","name":"医療法人愛仁会（宇都宮利根川橋クリニック）","dept":"","group":"","tanto":"村田","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"313","name":"医療法人愛仁会（佐野利根川橋クリニック）","dept":"","group":"","tanto":"村田","gensenKigen":"","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"337","name":"アドバンス","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"338","name":"アシスト","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"361","name":"ケイティサーチ株式会社","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"384","name":"株式会社トラストアンドカンパニー","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"391","name":"サンクスパワー","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"392","name":"宗教法人仙行寺","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"423","name":"株式会社齋藤商店","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"551","name":"(株)GBM","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"601","name":"プライマルホールディングス株式会社","dept":"","group":"","tanto":"村田","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"617","name":"プライマル株式会社","dept":"","group":"","tanto":"村田","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"625","name":"株式会社コンフォートガーデン","dept":"","group":"","tanto":"村田","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"632","name":"株式会社ブーケ","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"645","name":"株式会社市善","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"646","name":"日本電託株式会社","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"665","name":"株式会社アズ","dept":"","group":"","tanto":"村田","gensenKigen":"一般","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"無（関東ITS）","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"712","name":"ドリップデザイン","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"718","name":"ＡＵＮＺ","dept":"","group":"","tanto":"村田","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"719","name":"株式会社藤本壮介建築設計事務所","dept":"","group":"","tanto":"村田","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"834","name":"リワードゲーム株式会社","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"842","name":"株式会社日和","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"844","name":"株式会社齋藤信地所","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"923","name":"デジナーレ","dept":"","group":"","tanto":"村田","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"954","name":"ウィザーズコンサルティング株式会社","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"962","name":"株式会社アップジョー","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"972","name":"株式会社コアコンシェル","dept":"","group":"","tanto":"村田","gensenKigen":"","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1022","name":"合同会社名文路","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1120","name":"reminisce","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1202","name":"ｴﾑﾕｰｱｰﾙｱｿｼｴｲﾂ","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1242","name":"TUISS　DECOR㈱","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1267","name":"コムニコス","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1517","name":"大庭　敏幸","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1737","name":"新島　澄子","dept":"","group":"","tanto":"村田","gensenKigen":"","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1240","name":"little deer 合同会社","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"先方","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1245","name":"ミライト株式会社","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"438","name":"バズラボ株式会社","dept":"","group":"","tanto":"村田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1217","name":"Sweet Onion","dept":"資産","group":"S","tanto":"大島","gensenKigen":"-","gensenCreate":"","gensenAnno":"","rohoFlg":"-","rohoRecv":"","shahoFlg":"-","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"706","name":"ベルストーン","dept":"資産","group":"S","tanto":"大島","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1111","name":"フレニティ","dept":"資産","group":"S","tanto":"大島","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"221","name":"Ｓ and Ｅ株式会社","dept":"村田","group":"E","tanto":"長坂","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"328","name":"さくら建工","dept":"村田","group":"E","tanto":"長坂","gensenKigen":"","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"344","name":"株式会社ｱｲﾜｵﾘｴﾝﾀﾙｺｰﾎﾟﾚｰｼｮﾝ","dept":"村田","group":"E","tanto":"長坂","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"398","name":"株式会社GenerateSpark","dept":"村田","group":"E","tanto":"長坂","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"501","name":"GARAGE・KAIT株式会社","dept":"村田","group":"E","tanto":"長坂","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"534","name":"株式会社SS INTERNATIONAL","dept":"村田","group":"E","tanto":"長坂","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"535","name":"キヨシ","dept":"村田","group":"E","tanto":"長坂","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"-","rohoRecv":"","shahoFlg":"-","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"619","name":"ヒストリー・ワン","dept":"村田","group":"E","tanto":"長坂","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"636","name":"ジャパンサポート株式会社","dept":"村田","group":"E","tanto":"長坂","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"先方","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"741","name":"フォーティーファイブ株式会社","dept":"村田","group":"E","tanto":"長坂","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"959","name":"合同会社　ファンタジー","dept":"村田","group":"E","tanto":"長坂","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"961","name":"株式会社NEXTｓ","dept":"村田","group":"E","tanto":"長坂","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"963","name":"㈱FORTIS","dept":"村田","group":"E","tanto":"長坂","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1016","name":"モルスハルス","dept":"村田","group":"E","tanto":"長坂","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1040","name":"管理FIプランニング株式会社","dept":"村田","group":"E","tanto":"長坂","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1218","name":"ジェイエムプランニング","dept":"村田","group":"E","tanto":"長坂","gensenKigen":"宮下","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"請求なし","col15":"","col16":"","col17":""},
+{"code":"1244","name":"一般社団法人社会人剣道団体kent","dept":"村田","group":"E","tanto":"長坂","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1284","name":"株式会社ティー・エス・エス","dept":"村田","group":"E","tanto":"長坂","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1290","name":"FIプランニング","dept":"村田","group":"E","tanto":"長坂","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1298","name":"株式会社T・S・Iエステート","dept":"村田","group":"E","tanto":"長坂","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1661","name":"野中　暢之","dept":"村田","group":"E","tanto":"長坂","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"126","name":"合同会社さんすまいる","dept":"","group":"","tanto":"藤田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"218","name":"SKYBO株式会社","dept":"","group":"","tanto":"藤田","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"306","name":"株式会社リスキル","dept":"","group":"","tanto":"藤田","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"333","name":"株式会社奥利根電業","dept":"","group":"","tanto":"藤田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"339","name":"日本アパレルシステムサイエンス","dept":"","group":"","tanto":"藤田","gensenKigen":"先方","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"解約済み","col15":"","col16":"","col17":""},
+{"code":"352","name":"株式会社レモン","dept":"","group":"","tanto":"藤田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"未完了","col15":"","col16":"","col17":""},
+{"code":"369","name":"株式会社井上建設工業","dept":"","group":"","tanto":"藤田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"やらない","col15":"","col16":"","col17":""},
+{"code":"399","name":"リカレントキャリア","dept":"","group":"","tanto":"藤田","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"408","name":"株式会社アールスフェボリット","dept":"","group":"","tanto":"藤田","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"未完了","col15":"","col16":"","col17":""},
+{"code":"558","name":"株式会社RAISE","dept":"","group":"","tanto":"藤田","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"やらない","col15":"","col16":"","col17":""},
+{"code":"621","name":"株式会社ＯＩ","dept":"","group":"","tanto":"藤田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"675","name":"株式会社エムール","dept":"","group":"","tanto":"藤田","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"729","name":"有限会社エイチ・アイ・エフ","dept":"","group":"","tanto":"藤田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"818","name":"株式会社ラゾナル","dept":"","group":"","tanto":"藤田","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"やらない","col15":"","col16":"","col17":""},
+{"code":"835","name":"合同会社TtoK Planning","dept":"","group":"","tanto":"藤田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"866","name":"株式会社セマンティックベース","dept":"","group":"","tanto":"藤田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"解約","col15":"","col16":"","col17":""},
+{"code":"867","name":"株式会社ヘッジホッグ・メドテック","dept":"","group":"","tanto":"藤田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"905","name":"株式会社ＪＲＣ","dept":"","group":"","tanto":"藤田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"950","name":"合同会社ブルーローズ","dept":"","group":"","tanto":"藤田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1012","name":"岸田メディカル・ヘルスケア合同会社","dept":"","group":"","tanto":"藤田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1028","name":"株式会社ゼンシグ","dept":"","group":"","tanto":"藤田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1035","name":"株式会社YNWA","dept":"","group":"","tanto":"藤田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1114","name":"株式会社ハイクレストホールディングス","dept":"","group":"","tanto":"藤田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1222","name":"株式会社アットチュード","dept":"","group":"","tanto":"藤田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1247","name":"KZコーポレーション有限会社","dept":"","group":"","tanto":"藤田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1286","name":"株式会社日本ライセンスバンク","dept":"","group":"","tanto":"藤田","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1287","name":"株式会社リカレント","dept":"","group":"","tanto":"藤田","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"作","rohoRecv":"","shahoFlg":"作","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1299","name":"株式会社クレストヒルズテクノロジー","dept":"","group":"","tanto":"藤田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1314","name":"相良健治","dept":"","group":"","tanto":"藤田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1363","name":"吉野昌光","dept":"","group":"","tanto":"藤田","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1392","name":"柳橋篤志","dept":"","group":"","tanto":"藤田","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"2244","name":"高井陽介","dept":"","group":"","tanto":"藤田","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"219","name":"株式会社BORN","dept":"藤田","group":"B","tanto":"柏木","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"433","name":"ＧＭＧ株式会社","dept":"藤田","group":"B","tanto":"柏木","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"681","name":"川成株式会社","dept":"藤田","group":"B","tanto":"柏木","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"682","name":"川潤合同会社","dept":"藤田","group":"B","tanto":"柏木","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1113","name":"株式会社fanbeat.(旧社名：株式会社ファイブビート）","dept":"藤田","group":"B","tanto":"柏木","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有(上)","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"728","name":"S.S.I合同会社","dept":"藤田","group":"B","tanto":"柏木","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1276","name":"日本再生燃料株式会社","dept":"藤田","group":"B","tanto":"柏木","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"503","name":"株式会社TAKARA","dept":"藤田","group":"B","tanto":"柏木","gensenKigen":"","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"233","name":"有限会社HEAVEN","dept":"藤田","group":"B","tanto":"武藤雅智","gensenKigen":"一般","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"234","name":"有限会社ボイル","dept":"藤田","group":"B","tanto":"武藤雅智","gensenKigen":"一般","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"349","name":"百興商事","dept":"藤田","group":"B","tanto":"武藤雅智","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"689","name":"エルディーケーパートナーズ","dept":"藤田","group":"B","tanto":"武藤雅智","gensenKigen":"","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"868","name":"D＆N","dept":"藤田","group":"B","tanto":"武藤雅智","gensenKigen":"","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1214","name":"NAKAYAMA光学","dept":"藤田","group":"B","tanto":"武藤雅智","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1267","name":"株式会社超越","dept":"藤田","group":"B","tanto":"武藤雅智","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"626","name":"アロマ合同会社","dept":"資産","group":"S","tanto":"武藤","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"673","name":"株式会社フジタ","dept":"資産","group":"S","tanto":"武藤","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1037","name":"株式会社ルミエール","dept":"資産","group":"S","tanto":"武藤","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"380","name":"翔貴不動産合同会社","dept":"資産","group":"S","tanto":"武藤","gensenKigen":"","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"377","name":"青山リアルティ株式会社","dept":"資産","group":"S","tanto":"武藤","gensenKigen":"","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"357","name":"麻布アセットマネジメント合同会社","dept":"資産","group":"S","tanto":"武藤","gensenKigen":"","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"115","name":"麻布アセットマネジメントⅡ合同会社","dept":"資産","group":"S","tanto":"武藤","gensenKigen":"","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1732","name":"谷合　春三","dept":"資産","group":"S","tanto":"武藤","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1756","name":"本木　誠一","dept":"資産","group":"S","tanto":"武藤","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1780","name":"大澤　元治","dept":"資産","group":"S","tanto":"武藤","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"953","name":"(株)ＮｅｗＳｎｏｗＳｔｕｄｉｏ","dept":"村田","group":"A","tanto":"鄒","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1034","name":"多奈住宅販売株式会社（解約）","dept":"村田","group":"A","tanto":"鄒","gensenKigen":"","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"735","name":"株式会社NIS","dept":"村田","group":"A","tanto":"岸本","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"669","name":"㈱千羽（解散）","dept":"村田","group":"A","tanto":"鄒","gensenKigen":"-","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"955","name":"合同会社永桂","dept":"藤田","group":"B","tanto":"武藤雅智","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"347","name":"聖大国際科技株式会社","dept":"村田","group":"A","tanto":"万","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"851","name":"大森アウトドア株式会社","dept":"村田","group":"A","tanto":"万","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"434","name":"オーロラ・カルチャー・メディア㈱","dept":"村田","group":"A","tanto":"万","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1048","name":"瘋雪株式会社","dept":"村田","group":"A","tanto":"万","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1279","name":"株式会社GENKO","dept":"村田","group":"A","tanto":"万","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"作","rohoRecv":"","shahoFlg":"作","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"125","name":"株式会社ｱｲﾃﾞｨｸ","dept":"村田","group":"A","tanto":"万","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"430","name":"(株)哲思","dept":"村田","group":"A","tanto":"万","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"545","name":"株式会社　潜望","dept":"村田","group":"A","tanto":"万","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"349","name":"(株)百興商事","dept":"村田","group":"A","tanto":"万","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"425","name":"KAW株式会社","dept":"村田","group":"A","tanto":"万","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"-","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1212","name":"Animore(株)","dept":"村田","group":"A","tanto":"王","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1225","name":"HASCO JAPAN(株)","dept":"村田","group":"A","tanto":"万","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1227","name":"OCEAN BLUE JAPAN(株)","dept":"村田","group":"A","tanto":"万","gensenKigen":"無","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"676","name":"日本E購（単発案件）","dept":"村田","group":"A","tanto":"鄒","gensenKigen":"-","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1291","name":"黒石株式会社","dept":"村田","group":"A","tanto":"鄒","gensenKigen":"-","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"557","name":"大東株式会社","dept":"村田","group":"A","tanto":"鄒","gensenKigen":"-","gensenCreate":"","gensenAnno":"","rohoFlg":"","rohoRecv":"","shahoFlg":"","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"858","name":"富萱工業株式会社(R7/7 関与終了)","dept":"村田","group":"A","tanto":"袁","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"332","name":"株式会社 Hit Collection","dept":"村田","group":"A","tanto":"袁","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"355","name":"WM TECHNOLOGIES合同会社","dept":"村田","group":"A","tanto":"袁","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"368","name":"楽文株式会社","dept":"村田","group":"A","tanto":"袁","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"682","name":"金川株式会社","dept":"村田","group":"A","tanto":"袁","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"969","name":"潤泰株式会社","dept":"村田","group":"A","tanto":"袁","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"319","name":"スタミナ・スポーツ株式会社","dept":"村田","group":"A","tanto":"袁","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"先方","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"3252","name":"OMSAY工業合同じ会社（単発案件）","dept":"村田","group":"A","tanto":"袁","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1041","name":"株式会社桃子(R7/12 関与終了)","dept":"村田","group":"A","tanto":"袁","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1260","name":"株式会社日清不動産","dept":"村田","group":"A","tanto":"袁","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"436","name":"中潤万家株式会社","dept":"村田","group":"A","tanto":"袁","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"437","name":"技術先鋒株式会社","dept":"村田","group":"A","tanto":"袁","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1049","name":"連飛合同会社","dept":"村田","group":"A","tanto":"袁","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"847","name":"株式会社平安不動産","dept":"村田","group":"A","tanto":"袁","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1210","name":"㈱日本国際文化交流促進会(R7/12 関与終了)","dept":"村田","group":"A","tanto":"袁","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"/","col15":"","col16":"","col17":""},
+{"code":"863","name":"玄本株式会社","dept":"村田","group":"A","tanto":"袁","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1256","name":"元吉グループ㈱","dept":"村田","group":"A","tanto":"袁","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1142","name":"Ｘ＆Ｊ株式会社","dept":"村田","group":"A","tanto":"袁","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1221","name":"Ａｇｉｎｏｄｅ　Ｊａｐａｎ株式会社","dept":"村田","group":"A","tanto":"袁","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"435","name":"木元株式会社","dept":"村田","group":"A","tanto":"袁","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1283","name":"北島機械株式会社","dept":"村田","group":"A","tanto":"袁","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"211","name":"株式会社コスモブレインズ","dept":"","group":"K","tanto":"山下","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"378","name":"株式会社Doktor","dept":"","group":"K","tanto":"山下","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"340","name":"株式会社デセオシステムズ","dept":"","group":"K","tanto":"山下","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"417","name":"株式会社Fashion Fille","dept":"","group":"K","tanto":"山下","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"512","name":"株式会社FIELD","dept":"","group":"K","tanto":"山下","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"537","name":"株式会社est","dept":"","group":"K","tanto":"山下","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"538","name":"株式会社isoah","dept":"","group":"K","tanto":"山下","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"620","name":"澤田デザイン株式会社","dept":"","group":"K","tanto":"山下","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"627","name":"有限会社タスク","dept":"","group":"K","tanto":"山下","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"736","name":"株式会社KOME","dept":"","group":"K","tanto":"山下","gensenKigen":"毎月？","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"803","name":"株式会社ヌーブ","dept":"","group":"K","tanto":"山下","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"827","name":"デセオONE株式会社","dept":"","group":"K","tanto":"山下","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"934","name":"リザハート株式会社","dept":"","group":"K","tanto":"山下","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"937","name":"株式会社YHT","dept":"","group":"K","tanto":"山下","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1026","name":"合資会社エースラッシュ","dept":"","group":"K","tanto":"山下","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1051","name":"株式会社ミルーム","dept":"","group":"K","tanto":"山下","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1110","name":"アジアんグル株式会社","dept":"","group":"K","tanto":"山下","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1280","name":"株式会社プラネット（旧0371）","dept":"","group":"K","tanto":"山下","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1527","name":"小山内　美樹","dept":"","group":"K","tanto":"山下","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"1304","name":"京面　久孝弁護士","dept":"","group":"K","tanto":"山下","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"634","name":"株式会社ブライト","dept":"藤田","group":"D","tanto":"喜多","gensenKigen":"毎月","gensenCreate":"","gensenAnno":"","rohoFlg":"有","rohoRecv":"","shahoFlg":"有","shahoRecv":"","col14":"","col15":"","col16":"","col17":""},
+{"code":"671","name":"YT商事株式会社","dept":"藤田","group":"D","tanto":"喜多","gensenKigen":"納特","gensenCreate":"","gensenAnno":"","rohoFlg":"無","rohoRecv":"","shahoFlg":"無","shahoRecv":"","col14":"","col15":"","col16":"","col17":""}
+]
+;
+
+// ── 保存・復元 ────────────────────────────────
+const SAVE_KEY = 'noutoku_v1';
+
+function saveData(){
+  localStorage.setItem(SAVE_KEY, JSON.stringify(DATA));
+  showToast('保存しました');
+}
+function loadData(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(SAVE_KEY)||'null');
+    if(saved && Array.isArray(saved)){
+      DATA.length = 0;
+      saved.forEach(d => DATA.push(d));
+    }
+  }catch(e){}
+}
+function resetSaved(){
+  const pw = prompt('パスワードを入力してください');
+  if(pw === null) return;
+  if(pw !== '4132'){ alert('パスワードが違います'); return; }
+  if(!confirm('入力した内容をすべてリセットしますか？')) return;
+  localStorage.removeItem(SAVE_KEY);
+  location.reload();
+}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer=setTimeout(()=>t.classList.remove('show'),2000);
+}
+loadData();
+
+document.getElementById('hdr-date').textContent = new Date().toLocaleDateString('ja-JP') + ' 現在';
+
+// ── ヘルパー ──────────────────────────────────
+function isDone(v){ return v && v !== '' && v !== '-' && v !== 'ー' && v !== 'なし' && v !== '－' && v.trim() !== ''; }
+function isNA(v)  { return !v || v === '' || v === '-' || v === '無' || v === 'なし' || v === '－'; }
+function isClient(v){ return v && v.includes('先方'); }
+function isCancel(v){ return v && (v.includes('解約') || v.includes('なし')); }
+
+// 源泉税が対象外か
+function gensenTarget(d){
+  const k = d.gensenKigen;
+  if(!k || k==='' || k==='無' || k==='なし' || k==='-' || k==='先方' || k==='解約') return false;
+  return true;
+}
+// 源泉税完了か
+function gensenDone(d){
+  if(!gensenTarget(d)) return false;
+  const c = d.gensenCreate;
+  return c && c !== '' && c !== '無' && c !== '-' && c !== '先方' && c !== '先方作成';
+}
+// 労保対象か
+function rohoTarget(d){ return d.rohoFlg && d.rohoFlg !== '' && d.rohoFlg !== '無' && d.rohoFlg !== '-' && !isClient(d.rohoFlg); }
+// 労保完了か
+function rohoDone(d){ return rohoTarget(d) && isDone(d.rohoRecv); }
+// 社保対象か
+function shahoTarget(d){ return d.shahoFlg && d.shahoFlg !== '' && d.shahoFlg !== '無' && d.shahoFlg !== '-' && !isClient(d.shahoFlg); }
+// 社保完了か
+function shahoDone(d){ return shahoTarget(d) && isDone(d.shahoRecv); }
+
+// ── フラグ CSS ─────────────────────────────────
+function flgClass(v){
+  if(!v||v===''||v==='-') return 'v-無';
+  if(v==='無') return 'v-無';
+  if(v==='〇') return 'v-有';
+  if(v==='ゼロ納付') return 'v-ゼロ';
+  if(v==='納付書') return 'v-有';
+  if(v==='ダイレクト') return 'v-先方';
+  if(v==='クレジット') return 'v-other';
+  if(v.includes('有') || v==='有り') return 'v-有';
+  if(v.includes('先方'))  return 'v-先方';
+  if(v.includes('解約') || v==='なし') return 'v-解約';
+  if(v.includes('ゼロ') || v.includes('0納付') || v==='毎月' || v==='納特') return 'v-ゼロ';
+  return 'v-other';
+}
+
+// ── フラグ選択肢 ──────────────────────────────
+const OPTS = {
+  kigen:  ['納特','毎月','一般','無','なし','先方','解約'],
+  create: ['ゼロ納付','納付書','ダイレクト','クレジット',''],
+  anno:   ['〇',''],
+  roho:   ['有','無','先方',''],
+  shaho:  ['有','無','先方',''],
+};
+
+function flgSelect(i, key, val, optsKey){
+  const opts = OPTS[optsKey];
+  const list = opts.includes(val) ? opts : (val ? [val,...opts] : opts);
+  const cls  = flgClass(val);
+  const op   = list.map(o => '<option value="'+o+'"'+(o===val?' selected':'')+'>'+(o||'-')+'</option>').join('');
+  return '<select class="flg-sel '+cls+'" data-i="'+i+'" data-key="'+key+'" onchange="onFlagChange(this)">'+op+'</select>';
+}
+
+// ── フラグ変更 ────────────────────────────────
+function onFlagChange(sel){
+  const i   = parseInt(sel.dataset.i);
+  const key = sel.dataset.key;
+  const val = sel.value;
+  sel.className = 'flg-sel ' + flgClass(val);
+  DATA[i][key] = val;
+  const tr = document.getElementById('row-'+i);
+  updateDataset(tr, i);
+  buildSummary();
+  saveData();
+}
+
+// ── 回収プルダウン ────────────────────────────
+function recvClass(v, flg){
+  if(isNA(flg)||flg==='無') return 'v-na';
+  if(isClient(flg)) return 'v-client';
+  if(isDone(v)) return 'v-done';
+  return 'v-na';
+}
+function recvSelect(i, key, val){
+  const cls = recvClass(val, '');
+  return '<input class="recv-input '+cls+'" list="recv-datalist" value="'+(val||'')+'" data-i="'+i+'" data-key="'+key+'" oninput="onRecvInput(this)" onchange="onRecvChange(this)">';
+}
+function onRecvInput(input){
+  const flg = input.dataset.key==='rohoRecv' ? DATA[parseInt(input.dataset.i)].rohoFlg : DATA[parseInt(input.dataset.i)].shahoFlg;
+  input.className = 'recv-input ' + recvClass(input.value, flg);
+}
+function onRecvChange(input){
+  const i  = parseInt(input.dataset.i);
+  const key= input.dataset.key;
+  const val= input.value;
+  DATA[i][key] = val;
+  const flg = key==='rohoRecv' ? DATA[i].rohoFlg : DATA[i].shahoFlg;
+  input.className = 'recv-input ' + recvClass(val, flg);
+  const tr = document.getElementById('row-'+i);
+  updateDataset(tr, i);
+  buildSummary();
+  saveData();
+}
+
+// ── 案内日ドット ──────────────────────────────
+function annoDot(v, flg){
+  if(!gensenTarget({gensenKigen:flg})) return '<div class="dot na" title="対象外"></div>';
+  if(v==='〇' || isDone(v)) return '<div class="dot done" title="案内済"></div>';
+  return '<div class="dot empty" title="未案内"></div>';
+}
+
+// ── グループバッジ色 ──────────────────────────
+const GRP_COLORS = {A:'#4361ee',B:'#3a0ca3',C:'#7209b7',D:'#f72585',E:'#4cc9f0',K:'#06d6a0',S:'#e76f51'};
+function grpColor(g){
+  if(!g) return '#f8f9fa';
+  return GRP_COLORS[g] || '#6c757d';
+}
+function grpBadge(g){
+  if(!g) return '<span style="color:#bbb;font-size:11px">-</span>';
+  const col = GRP_COLORS[g] || '#6c757d';
+  return '<span class="grp-badge" style="background:'+col+'">'+g+'</span>';
+}
+
+// ── dataset 更新 ──────────────────────────────
+function updateDataset(tr, i){
+  const d = DATA[i];
+  tr.dataset.gt = gensenTarget(d)?'1':'0';
+  tr.dataset.gn = (d.gensenKigen==='納特')?'1':'0';
+  tr.dataset.gd = (d.gensenAnno==='〇')?'1':'0';
+  tr.dataset.rt = rohoTarget(d)?'1':'0';
+  tr.dataset.rd = rohoDone(d)?'1':'0';
+  tr.dataset.st = shahoTarget(d)?'1':'0';
+  tr.dataset.sd = shahoDone(d)?'1':'0';
+}
+
+// ── プルダウン初期化 ──────────────────────────
+function initSelect(id, values){
+  const s = document.getElementById(id);
+  [...new Set(values.filter(Boolean))].sort().forEach(v=>{
+    const o = document.createElement('option'); o.value=v; o.textContent=v; s.appendChild(o);
+  });
+}
+initSelect('group-filter', DATA.map(d=>d.group));
+initSelect('dept-filter',  DATA.map(d=>d.dept));
+initSelect('tanto-filter', DATA.map(d=>d.tanto));
+
+// 担当 datalist（既存値をサジェスト＋新規入力も可能）
+const tantoDatalist = document.createElement('datalist');
+tantoDatalist.id = 'tanto-datalist';
+[...new Set(DATA.map(d=>d.tanto).filter(Boolean))].sort().forEach(t=>{
+  const op = document.createElement('option'); op.value = t; tantoDatalist.appendChild(op);
+});
+document.body.appendChild(tantoDatalist);
+
+function onTantoChange(input){
+  const i   = parseInt(input.dataset.i);
+  const val = input.value.trim();
+  DATA[i].tanto = val;
+  const tr = document.getElementById('row-'+i);
+  tr.dataset.tanto = val;
+  const tSel = document.getElementById('tanto-filter');
+  if(val && ![...tSel.options].some(o=>o.value===val)){
+    const op = document.createElement('option'); op.value=val; op.textContent=val; tSel.appendChild(op);
+    const op2 = document.createElement('option'); op2.value=val; tantoDatalist.appendChild(op2);
+  }
+  buildSummary();
+  saveData();
+}
+
+// GRP datalist
+const grpDatalist = document.createElement('datalist');
+grpDatalist.id = 'grp-datalist';
+[...new Set(DATA.map(d=>d.group).filter(Boolean))].sort().forEach(g=>{
+  const op = document.createElement('option'); op.value = g; grpDatalist.appendChild(op);
+});
+document.body.appendChild(grpDatalist);
+
+function onGrpInput(input){
+  const v = input.value.trim();
+  input.style.background = grpColor(v);
+  input.style.color = v ? '#fff' : '#999';
+}
+function onGrpChange(input){
+  const i   = parseInt(input.dataset.i);
+  const val = input.value.trim();
+  DATA[i].group = val;
+  const tr = document.getElementById('row-'+i);
+  tr.dataset.group = val;
+  input.style.background = grpColor(val);
+  input.style.color = val ? '#fff' : '#999';
+  const gSel = document.getElementById('group-filter');
+  if(val && ![...gSel.options].some(o=>o.value===val)){
+    const op = document.createElement('option'); op.value=val; op.textContent=val; gSel.appendChild(op);
+    const op2 = document.createElement('option'); op2.value=val; grpDatalist.appendChild(op2);
+  }
+  buildSummary();
+  saveData();
+}
+
+// 部門 datalist
+const deptDatalist = document.createElement('datalist');
+deptDatalist.id = 'dept-datalist';
+[...new Set(DATA.map(d=>d.dept).filter(Boolean))].sort().forEach(d=>{
+  const op = document.createElement('option'); op.value = d; deptDatalist.appendChild(op);
+});
+document.body.appendChild(deptDatalist);
+
+function onDeptChange(input){
+  const i   = parseInt(input.dataset.i);
+  const val = input.value.trim();
+  DATA[i].dept = val;
+  const tr = document.getElementById('row-'+i);
+  tr.dataset.dept = val;
+  const dSel = document.getElementById('dept-filter');
+  if(val && ![...dSel.options].some(o=>o.value===val)){
+    const op = document.createElement('option'); op.value=val; op.textContent=val; dSel.appendChild(op);
+    const op2 = document.createElement('option'); op2.value=val; deptDatalist.appendChild(op2);
+  }
+  buildSummary();
+  saveData();
+}
+
+// 回収 datalist（〇 + データ内ユニーク値）
+const recvDatalist = document.createElement('datalist');
+recvDatalist.id = 'recv-datalist';
+const RECV_SUGGEST = ['〇', ...new Set([
+  ...DATA.map(d=>d.rohoRecv), ...DATA.map(d=>d.shahoRecv)
+].filter(v=>v&&v.trim()!==''))].sort((a,b)=>a.localeCompare(b,'ja'));
+RECV_SUGGEST.forEach(v=>{
+  const op = document.createElement('option'); op.value=v; recvDatalist.appendChild(op);
+});
+document.body.appendChild(recvDatalist);
+
+// ── テーブル描画 ──────────────────────────────
+const tbody = document.getElementById('tbody');
+
+function buildTable(){
+  tbody.innerHTML = '';
+  DATA.forEach((d,i)=>{
+    const tr = document.createElement('tr');
+    tr.id = 'row-'+i;
+    if(i%2) tr.className='odd';
+    tr.dataset.nm    = (d.name||'').toLowerCase();
+    tr.dataset.code  = String(d.code||'').padStart(4,'0');
+    tr.dataset.group = d.group||'';
+    tr.dataset.dept  = d.dept||'';
+    tr.dataset.tanto = d.tanto||'';
+    updateDataset(tr, i);
+
+    tr.innerHTML =
+      '<td class="code-cell">'+String(d.code||'').padStart(4,'0')+'</td>'+
+      '<td class="name-cell">'+d.name+'</td>'+
+      '<td class="center"><input class="dept-input" list="dept-datalist" value="'+(d.dept||'')+'" data-i="'+i+'" onchange="onDeptChange(this)"></td>'+
+      '<td class="center"><input class="grp-input" list="grp-datalist" value="'+(d.group||'')+'" data-i="'+i+'" oninput="onGrpInput(this)" onchange="onGrpChange(this)" style="background:'+grpColor(d.group)+';color:'+(d.group?'#fff':'#999')+'"></td>'+
+      '<td class="center"><input class="tanto-input" list="tanto-datalist" value="'+(d.tanto||'')+'" data-i="'+i+'" onchange="onTantoChange(this)"></td>'+
+      '<td class="center">'+flgSelect(i,'gensenKigen',d.gensenKigen,'kigen')+'</td>'+
+      '<td class="center">'+flgSelect(i,'gensenCreate',d.gensenCreate,'create')+'</td>'+
+      '<td class="center">'+flgSelect(i,'gensenAnno',d.gensenAnno,'anno')+'</td>'+
+      '<td class="center">'+flgSelect(i,'rohoFlg',d.rohoFlg,'roho')+'</td>'+
+      '<td class="center">'+recvSelect(i,'rohoRecv',d.rohoRecv)+'</td>'+
+      '<td class="center">'+flgSelect(i,'shahoFlg',d.shahoFlg,'shaho')+'</td>'+
+      '<td class="center">'+recvSelect(i,'shahoRecv',d.shahoRecv)+'</td>'+
+      '<td class="center"><button class="del-btn" onclick="deleteCompany('+i+')" title="削除">×</button></td>';
+
+    tbody.appendChild(tr);
+  });
+  applyFilters();
+}
+
+// ── 法人追加・削除 ────────────────────────────
+function deleteCompany(i){
+  const pw = prompt('削除するにはパスワードを入力してください');
+  if(pw === null) return;
+  if(pw !== '4132'){ alert('パスワードが違います'); return; }
+  if(!confirm('「'+DATA[i].name+'」を削除しますか？')) return;
+  DATA.splice(i, 1);
+  buildTable();
+  buildSummary();
+  saveData();
+}
+
+function openAddModal(){
+  document.getElementById('add-modal').style.display='flex';
+  document.getElementById('add-code').value='';
+  document.getElementById('add-name').value='';
+  document.getElementById('add-dept').value='';
+  document.getElementById('add-group').value='';
+  document.getElementById('add-tanto').value='';
+  document.getElementById('add-name').focus();
+}
+function closeAddModal(){
+  document.getElementById('add-modal').style.display='none';
+}
+function submitAdd(){
+  const name = document.getElementById('add-name').value.trim();
+  if(!name){ alert('会社名を入力してください'); return; }
+  const d = {
+    code:      document.getElementById('add-code').value.trim(),
+    name:      name,
+    dept:      document.getElementById('add-dept').value.trim(),
+    group:     document.getElementById('add-group').value.trim(),
+    tanto:     document.getElementById('add-tanto').value.trim(),
+    gensenKigen:'', gensenCreate:'', gensenAnno:'',
+    rohoFlg:'', rohoRecv:'', shahoFlg:'', shahoRecv:'',
+    col14:'', col15:'', col16:'', col17:''
+  };
+  DATA.push(d);
+  buildTable();
+  buildSummary();
+  saveData();
+  closeAddModal();
+}
+
+buildTable();
+
+// ── サマリー ──────────────────────────────────
+function buildSummary(){
+  const rows = Array.from(document.querySelectorAll('#tbody tr:not(.hidden)'));
+  const n  = rows.length;
+  const gD = rows.filter(r=>r.dataset.gn==='1'&&r.dataset.gd==='1').length;
+  const gT = rows.filter(r=>r.dataset.gn==='1').length;
+  const rD = rows.filter(r=>r.dataset.rt==='1'&&r.dataset.rd==='1').length;
+  const rT = rows.filter(r=>r.dataset.rt==='1').length;
+  const sD = rows.filter(r=>r.dataset.st==='1'&&r.dataset.sd==='1').length;
+  const sT = rows.filter(r=>r.dataset.st==='1').length;
+  function c(cls,lb,v){return '<div class="scard '+cls+'"><div class="sc-label">'+lb+'</div><div class="sc-val">'+v+'</div></div>';}
+  document.getElementById('summary-area').innerHTML =
+    c('c1','表示件数',n)+
+    c('c2','源泉税完了',gD+'/'+gT)+
+    c('c3','労保完了',rD+'/'+rT)+
+    c('c4','社保完了',sD+'/'+sT)+
+    c('c5','全完了',rows.filter(r=>{
+      const gt=r.dataset.gt==='1',rt=r.dataset.rt==='1',st=r.dataset.st==='1';
+      const gd=r.dataset.gd==='1',rd=r.dataset.rd==='1',sd=r.dataset.sd==='1';
+      return (!gt||gd)&&(!rt||rd)&&(!st||sd);
+    }).length+'/'+n);
+  document.getElementById('cnt-info').textContent='表示: '+n+'件';
+}
+
+// ── フィルター ────────────────────────────────
+let curFilter='all';
+function setFilter(t,btn){
+  curFilter=t;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+function applyFilters(){
+  const kw = document.getElementById('search').value.toLowerCase();
+  const gv = document.getElementById('group-filter').value;
+  const dv = document.getElementById('dept-filter').value;
+  const tv = document.getElementById('tanto-filter').value;
+  document.querySelectorAll('#tbody tr').forEach(tr=>{
+    let show = true;
+    if(kw && !tr.dataset.nm.includes(kw) && !tr.dataset.code.includes(kw)) show=false;
+    if(gv && tr.dataset.group !== gv) show=false;
+    if(dv && tr.dataset.dept  !== dv) show=false;
+    if(tv && tr.dataset.tanto !== tv) show=false;
+    if(curFilter==='gensen-inc' && !(tr.dataset.gt==='1'&&tr.dataset.gd==='0')) show=false;
+    if(curFilter==='roho-inc'   && !(tr.dataset.rt==='1'&&tr.dataset.rd==='0')) show=false;
+    if(curFilter==='shaho-inc'  && !(tr.dataset.st==='1'&&tr.dataset.sd==='0')) show=false;
+    tr.classList.toggle('hidden',!show);
+  });
+  buildSummary();
+}
+applyFilters();
+</script>
+</body>
+</html>
+
